@@ -6,6 +6,15 @@ from datetime import datetime
 
 app = FastAPI(title="Smart Attendance System API")
 
+# <-- ADD THIS BLOCK RIGHT AFTER DEFINING app -->
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all frontend requests
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # --- CBSE MySQL DATABASE CONFIGURATION ---
 DB_CONFIG = {
     "host": "localhost",
