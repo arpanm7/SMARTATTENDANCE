@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Attendance Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-slate-900 text-white min-h-screen font-sans">
+
+    <!-- Header Navbar -->
+    <header class="border-b border-slate-800 bg-slate-950 px-6 py-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+            <i class="bi bi-person-bounding-box text-blue-500 text-2xl"></i>
+            <h1 class="text-xl font-bold tracking-wide">Smart Attendance System</h1>
+        </div>
+        <div class="flex items-center gap-2 text-sm text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-3 py-1 rounded-full">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Session Active</span>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-6 space-y-6">
+
+        <!-- Stat Cards Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-sm">
+                <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Total Enrolled</p>
+                <h3 id="stat-total" class="text-3xl font-bold mt-1 text-slate-100">--</h3>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-sm">
+                <p class="text-emerald-400 text-xs font-semibold uppercase tracking-wider">Present Today</p>
+                <h3 id="stat-present" class="text-3xl font-bold mt-1 text-emerald-400">0</h3>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-sm">
+                <p class="text-rose-400 text-xs font-semibold uppercase tracking-wider">Absent Today</p>
+                <h3 id="stat-absent" class="text-3xl font-bold mt-1 text-rose-400">0</h3>
+            </div>
+            <div class="bg-slate-800 border border-slate-700 rounded-xl p-5 shadow-sm">
+                <p class="text-blue-400 text-xs font-semibold uppercase tracking-wider">Last Log Time</p>
+                <h3 id="stat-last-log" class="text-2xl font-bold mt-2 text-blue-400">--:--</h3>
+            </div>
+        </div>
+
+        <!-- Attendance Logs Table -->
+        <div class="bg-slate-800 border border-slate-700 rounded-xl overflow-hidden shadow-sm">
+            <div class="p-4 bg-slate-800/80 border-b border-slate-700 flex items-center justify-between">
+                <h2 class="font-semibold text-slate-200">Live Attendance Records</h2>
+                <button onclick="fetchAttendance()" class="text-sm bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                    <i class="bi bi-arrow-clockwise"></i> Refresh
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-300">
+                    <thead class="bg-slate-900/50 text-slate-400 uppercase text-xs">
+                        <tr>
+                            <th class="px-6 py-3">Student Name</th>
+                            <th class="px-6 py-3">Roll / ID</th>
+                            <th class="px-6 py-3">Date</th>
+                            <th class="px-6 py-3">Time Logged</th>
+                            <th class="px-6 py-3">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="attendance-rows" class="divide-y divide-slate-700">
+                        <tr>
+                            <td colspan="5" class="px-6 py-8 text-center text-slate-500">Loading attendance data...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- JavaScript to Fetch Data from FastAPI -->
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+
+        async function fetchAttendance() {
+            try {
+                // Fetch attendance logs
+                const response = await fetch(`${API_URL}/attendance`);
+                const data = await response.json();
+                const records = data.attendance || [];
+
+                const tableBody = document.getElementById("attendance-rows");
+                
+                if (records.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500">No attendance marked today yet.</td></tr>`;
+                    document.getElementById("stat-present").innerText = "0";
+                    return;
+                }
+
+                // Populate Table
+                tableBody.innerHTML = records.map(record => `
+                    <tr class="hover:bg-slate-700/50 transition-colors">
+                        <td class="px-6 py-4 font-medium text-white">${record.student_name}</td>
+                        <td class="px-6 py-4 text-slate-400">${record.student_id}</td>
+                        <td class="px-6 py-4 text-slate-400">${record.date}</td>
+                        <td class="px-6 py-4 text-slate-400">${record.time}</td>
+                        <td class="px-6 py-4">
+                            <span class="bg-emerald-950 text-emerald-400 border border-emerald-800 px-2.5 py-0.5 rounded-full text-xs font-semibold">
+                                ${record.status}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Update Stats
+                document.getElementById("stat-present").innerText = records.length;
+                document.getElementById("stat-last-log").innerText = records[0]?.time || "--:--";
+
+            } catch (error) {
+                console.error("API Error:", error);
+            }
+        }
+
+        async function fetchStudentCount() {
+            try {
+                const response = await fetch(`${API_URL}/students`);
+                const data = await response.json();
+                const count = data.students ? data.students.length : 0;
+                document.getElementById("stat-total").innerText = count || "50";
+            } catch (error) {
+                document.getElementById("stat-total").innerText = "50";
+            }
+        }
+
+        // Initial Load + Auto Refresh every 3 seconds
+        fetchStudentCount();
+        fetchAttendance();
+        setInterval(fetchAttendance, 3000);
+    </script>
+</body>
+</html>
